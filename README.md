@@ -5,7 +5,8 @@ training data. Documents are chunked, embedded, and stored in a vector database;
 at query time the most relevant chunks are retrieved and passed to Claude, which
 answers using only that context and cites the source file for each fact.
 
-**Live demo:** _add the Streamlit Community Cloud URL here after deploying (see [Deploy](#deploy))._
+**Repo:** [github.com/Iblis-Code/rag-chatbot](https://github.com/Iblis-Code/rag-chatbot)
+**Live demo:** _not yet deployed — Streamlit Cloud step below is pending (see [Deploy](#deploy))._
 
 ## Status
 
@@ -14,19 +15,20 @@ answers using only that context and cites the source file for each fact.
 | Config, loaders, chunker, embeddings, vector store, ingest, chatbot | ✅ implemented + unit tested |
 | Streamlit UI (`app.py`) | ✅ implemented + smoke tested (`AppTest`) |
 | CLI scripts (`scripts/ingest_cli.py`, `scripts/eval_retrieval.py`) | ✅ implemented + tested |
-| Test suite | ✅ `pytest`, 60 tests |
+| Test suite | ✅ `pytest`, 60 tests, **60/60 passing** (last run 2026-09-05) |
 | Sample documents + `tests/eval_set.json` | ✅ 3 demo docs, 11-question eval set (**hit@4 = 1.00**) |
+| GitHub repo | ✅ pushed — public, [Iblis-Code/rag-chatbot](https://github.com/Iblis-Code/rag-chatbot), branch `main` |
 | Deployment config | ✅ ready — follow [Deploy](#deploy) to publish |
 | Cost & abuse controls (rate limits, history cap, input cap, password gate) | ✅ implemented + tested — see [Cost & abuse controls](#cost--abuse-controls) |
 
 The full build plan lives in [`docs/PLAN.md`](docs/PLAN.md).
 
-## Publishing (manual — not yet done)
+## Publishing (in progress)
 
 The code is complete and tested (60 passing tests), cost-control guardrails included.
-Going live is a ~15-minute manual pass:
+The repo is live on GitHub; two manual steps remain to get a public URL:
 
-- [ ] `git init` + first commit, push to a **public** GitHub repo (not under git yet)
+- [x] `git init` + first commit, push to a **public** GitHub repo — done: [Iblis-Code/rag-chatbot](https://github.com/Iblis-Code/rag-chatbot)
 - [ ] Create a dedicated **Anthropic Workspace**, mint a scoped API key, and set a
       **monthly spend limit + usage alerts** on it (backstop — do not skip)
 - [ ] Create the app at [share.streamlit.io](https://share.streamlit.io) — main
@@ -193,7 +195,7 @@ doesn't need to be fully public.
 
 Free hosting on **Streamlit Community Cloud**:
 
-1. Push this repo to **public GitHub**.
+1. ✅ Push this repo to **public GitHub** — done: [Iblis-Code/rag-chatbot](https://github.com/Iblis-Code/rag-chatbot).
 2. Set up the API-key backstop first — see [Cost & abuse controls](#cost--abuse-controls):
    a dedicated Anthropic **Workspace**, a scoped key, a monthly spend limit, and alert
    emails.
