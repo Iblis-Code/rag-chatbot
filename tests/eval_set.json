@@ -1,0 +1,46 @@
+[
+  {
+    "question": "How many paid vacation days do full-time employees get each year?",
+    "expected_source": "acme_handbook.md"
+  },
+  {
+    "question": "Can I work from home, and how many days a week?",
+    "expected_source": "acme_handbook.md"
+  },
+  {
+    "question": "Is there a budget for a desk and chair at home?",
+    "expected_source": "acme_handbook.md"
+  },
+  {
+    "question": "Who needs to approve an expense report for $800?",
+    "expected_source": "acme_handbook.md"
+  },
+  {
+    "question": "What does the Pro plan cost per user?",
+    "expected_source": "acme_analytics_faq.md"
+  },
+  {
+    "question": "How long is data kept on the Enterprise plan?",
+    "expected_source": "acme_analytics_faq.md"
+  },
+  {
+    "question": "Can I switch my account from the US region to Europe later?",
+    "expected_source": "acme_analytics_faq.md"
+  },
+  {
+    "question": "How many API requests per minute are allowed on Pro?",
+    "expected_source": "acme_analytics_faq.md"
+  },
+  {
+    "question": "What is the minimum password length for staff accounts?",
+    "expected_source": "acme_security_policy.md"
+  },
+  {
+    "question": "How soon must I report a suspected security breach?",
+    "expected_source": "acme_security_policy.md"
+  },
+  {
+    "question": "How often does the company review who has access to systems?",
+    "expected_source": "acme_security_policy.md"
+  }
+]
