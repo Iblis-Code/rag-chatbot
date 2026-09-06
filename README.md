@@ -228,6 +228,60 @@ Notes:
   import sys; sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
   ```
 
+## Deployment log (this instance)
+
+Concrete record of what's actually configured for the live deployment above —
+so a future change (rotating the key, raising the cap, opening access) starts
+from what's true today instead of guesswork. Update this section whenever a
+setting below changes.
+
+**GitHub**
+- Repo: [Iblis-Code/rag-chatbot](https://github.com/Iblis-Code/rag-chatbot), public, branch `main`
+- Commits authored as `Iblis-Code <275904533+Iblis-Code@users.noreply.github.com>`
+  (set via `git config --global user.name` / `user.email` — real email kept out of
+  commit history on purpose)
+- `gh` CLI is authenticated as `Iblis-Code` locally (`gh auth status` to confirm/renew)
+
+**Anthropic Console** — [platform.claude.com/settings/workspaces](https://platform.claude.com/settings/workspaces)
+- Dedicated workspace: **`rag-chatbot-demo`** (kept separate from any other API usage on
+  this account, so it can be capped/revoked in isolation)
+- API key minted *inside* that workspace and used as the `ANTHROPIC_API_KEY` Streamlit
+  secret (the raw key value isn't recorded anywhere in this repo or README, by design —
+  if it's lost, revoke it in the Console and mint a new one, then update the Streamlit
+  secret)
+- Started from **$5 of organizational credit**, explicitly framed as a temporary
+  prove-it-out budget, not a production allocation
+- Workspace **Limits** tab (workspace details page → **Limits**): a monthly spend cap
+  set below the $5 credit (leaving a small buffer), plus email usage-alert
+  notification(s) via **Add notification** so a threshold email arrives before the
+  hard cap is hit. Exact dollar values were set interactively in the Console UI, not
+  tracked here — check/adjust them on that tab directly; they're the first thing to
+  raise if the $5 credit is upgraded later.
+
+**Streamlit Community Cloud** — [share.streamlit.io](https://share.streamlit.io)
+- App URL: **https://rag-chatbot-project-1.streamlit.app/**
+- Source: `Iblis-Code/rag-chatbot`, branch `main`, main file `app.py`
+- Python version: **3.12** (matches `.python-version`; deliberately not the 3.14
+  default Streamlit offered, to avoid torch/chromadb wheel issues on a brand-new
+  Python)
+- Secrets configured (Settings → Secrets): `ANTHROPIC_API_KEY` (the `rag-chatbot-demo`
+  key above) and `APP_PASSWORD` (a shared password chosen at deploy time — share it
+  out-of-band with anyone you want to try the app; rotate by editing the same secret)
+- **Viewer access: restricted**, not public — Settings → Sharing is set to specific
+  allowed viewers rather than "anyone with the link." This was a deliberate choice
+  while proving things out on the $5 credit (belt-and-suspenders alongside
+  `APP_PASSWORD` and the app's rate limits). **To open it up:** Streamlit app →
+  Settings → Sharing → switch to public/anyone-with-the-link. Nothing else needs to
+  change — `APP_PASSWORD` and the app-side guardrails (`RATE_LIMIT_PER_HOUR`, etc.,
+  see [Cost & abuse controls](#cost--abuse-controls)) still apply after that switch.
+- No `pysqlite3-binary` shim was needed — the build succeeded against ChromaDB as-is
+  on Streamlit's current base image. If a future redeploy hits
+  `unsupported version of sqlite3`, see the fallback in [Deploy](#deploy) above.
+
+**What's *not* recorded here on purpose:** the actual API key and `APP_PASSWORD`
+values, and the exact spend-limit/alert dollar amounts — all live only in the
+Anthropic Console and Streamlit secrets, never in this repo.
+
 ## Configuration
 
 All settings resolve as: real env var / `.env` → `st.secrets` (on Streamlit) →
