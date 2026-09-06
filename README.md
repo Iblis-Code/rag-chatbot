@@ -6,7 +6,7 @@ at query time the most relevant chunks are retrieved and passed to Claude, which
 answers using only that context and cites the source file for each fact.
 
 **Repo:** [github.com/Iblis-Code/rag-chatbot](https://github.com/Iblis-Code/rag-chatbot)
-**Live demo:** _not yet deployed — Streamlit Cloud step below is pending (see [Deploy](#deploy))._
+**Live demo:** [rag-chatbot-project-1.streamlit.app](https://rag-chatbot-project-1.streamlit.app/) — ⚠️ **viewer access currently restricted** to specific Streamlit accounts (Settings → Sharing), while it's being proven out on a $5 workspace credit. Not yet reachable by a bare link. To open it up: Streamlit Cloud app → **Settings → Sharing** → set to public/anyone-with-the-link; the app's own `APP_PASSWORD` guardrail still gates the chat/uploader after that.
 
 ## Status
 
@@ -18,7 +18,8 @@ answers using only that context and cites the source file for each fact.
 | Test suite | ✅ `pytest`, 60 tests, **60/60 passing** (last run 2026-09-05) |
 | Sample documents + `tests/eval_set.json` | ✅ 3 demo docs, 11-question eval set (**hit@4 = 1.00**) |
 | GitHub repo | ✅ pushed — public, [Iblis-Code/rag-chatbot](https://github.com/Iblis-Code/rag-chatbot), branch `main` |
-| Deployment config | ✅ ready — follow [Deploy](#deploy) to publish |
+| Anthropic Workspace + key | ✅ `rag-chatbot-demo` workspace, scoped key, spend limit + usage alerts set ($5 credit) |
+| Streamlit Cloud deploy | ✅ live at the URL above — Python 3.12, `APP_PASSWORD` set — but **viewer access restricted**, not public yet |
 | Cost & abuse controls (rate limits, history cap, input cap, password gate) | ✅ implemented + tested — see [Cost & abuse controls](#cost--abuse-controls) |
 
 The full build plan lives in [`docs/PLAN.md`](docs/PLAN.md).
@@ -26,16 +27,17 @@ The full build plan lives in [`docs/PLAN.md`](docs/PLAN.md).
 ## Publishing (in progress)
 
 The code is complete and tested (60 passing tests), cost-control guardrails included.
-The repo is live on GitHub; two manual steps remain to get a public URL:
+It's deployed end-to-end; the one remaining decision is whether/when to open it to the public:
 
 - [x] `git init` + first commit, push to a **public** GitHub repo — done: [Iblis-Code/rag-chatbot](https://github.com/Iblis-Code/rag-chatbot)
-- [ ] Create a dedicated **Anthropic Workspace**, mint a scoped API key, and set a
-      **monthly spend limit + usage alerts** on it (backstop — do not skip)
-- [ ] Create the app at [share.streamlit.io](https://share.streamlit.io) — main
-      file `app.py`, Python **3.12**
-- [ ] Add the scoped `ANTHROPIC_API_KEY` secret (Settings → Secrets); add `APP_PASSWORD`
-      and any rate-limit overrides if used
-- [ ] Paste the resulting URL into the **Live demo** line at the top of this README
+- [x] Create a dedicated **Anthropic Workspace**, mint a scoped API key, and set a
+      **monthly spend limit + usage alerts** on it — done: `rag-chatbot-demo` workspace, $5 credit capped
+- [x] Create the app at [share.streamlit.io](https://share.streamlit.io) — main
+      file `app.py`, Python **3.12** — done
+- [x] Add the scoped `ANTHROPIC_API_KEY` secret (Settings → Secrets); `APP_PASSWORD` set
+- [x] Paste the resulting URL into the **Live demo** line at the top of this README
+- [ ] Decide when to flip **Settings → Sharing** to public — currently restricted to
+      specific viewers deliberately, while proving things out on the $5 credit
 
 See [Deploy](#deploy) for the detailed walkthrough.
 
