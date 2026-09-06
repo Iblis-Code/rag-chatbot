@@ -282,6 +282,17 @@ setting below changes.
 values, and the exact spend-limit/alert dollar amounts — all live only in the
 Anthropic Console and Streamlit secrets, never in this repo.
 
+**Live smoke test (2026-09-05):** verified against the deployed app —
+`APP_PASSWORD` gate prompts and unlocks correctly; a question from
+`tests/eval_set.json` against the auto-indexed sample docs returned a grounded
+answer with the correct file cited in Sources; the sidebar uploader was also
+tested with an external `.md` file (not part of this repo) to confirm ingestion
+and retrieval work for user-supplied documents, not just the bundled samples.
+Repeat this sequence (password → one eval-set question → one negative/no-match
+question → optionally one uploaded file) any time to confirm a redeploy still
+works end to end; see [Cost & abuse controls](#cost--abuse-controls) for
+per-question cost.
+
 ## Configuration
 
 All settings resolve as: real env var / `.env` → `st.secrets` (on Streamlit) →
