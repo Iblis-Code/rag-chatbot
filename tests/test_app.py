@@ -2,6 +2,13 @@
 
 These check that ``app.py`` executes end-to-end and wires widgets to config;
 the retrieval/answer logic itself is covered by the ``rag`` test modules.
+
+Running ``app.py`` auto-ingests ``data/samples/`` whenever the store is empty --
+and ``conftest`` gives every test a fresh temp store, so that happens once per
+test here. Left alone it would load the real ~90 MB sentence-transformers model
+each time, which needs torch, needs the network on a cold cache, and blows the
+``AppTest`` timeout. The embedder is stubbed with the same deterministic hashing
+double the rest of the suite uses, keeping these tests fast and torch-free.
 """
 
 from __future__ import annotations
@@ -15,8 +22,22 @@ pytest.importorskip("streamlit")
 from streamlit.testing.v1 import AppTest  # noqa: E402
 
 from rag import config  # noqa: E402
+from tests.helpers import hashing_embed  # noqa: E402
 
 APP_PATH = str(Path(__file__).resolve().parent.parent / "app.py")
+
+
+@pytest.fixture(autouse=True)
+def stub_embedder(monkeypatch):
+    """Swap the real sentence-transformers model for the deterministic double.
+
+    ``rag.ingest`` and ``app.ensure_embedder_ready`` both import from
+    ``rag.embeddings`` at call time, so patching the module attributes is enough.
+    """
+    from rag import embeddings
+
+    monkeypatch.setattr(embeddings, "embed_texts", hashing_embed)
+    monkeypatch.setattr(embeddings, "embed_query", lambda text: hashing_embed([text])[0])
 
 
 def _run() -> AppTest:
