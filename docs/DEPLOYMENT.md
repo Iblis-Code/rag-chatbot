@@ -129,6 +129,18 @@ Repeat that sequence any time to confirm a redeploy still works end to end:
 
 1. Open the link in a private window → expect the chat directly, with no sign-in and no
    password prompt.
+
+   To check public reachability from the command line instead, **use a cookie jar**:
+
+   ```bash
+   curl -sSL -c /tmp/j -b /tmp/j -o /dev/null -w "%{http_code}
+"      https://rag-chatbot-project-1.streamlit.app/
+   ```
+
+   Expect `200` after ~3 redirects. Streamlit establishes a session through a redirect
+   handshake, so a cookie-less `curl` loops until it hits the redirect cap and looks
+   exactly like an authentication wall even when the app is fully public. `/healthz`
+   answers 200 regardless and says nothing about viewer access.
 2. One question from `tests/eval_set.json` → expect a grounded answer citing the right file.
 3. One question the samples cannot answer → expect "I don't know", not a guess.
 4. Optionally, upload a file and ask about it.
