@@ -1,12 +1,15 @@
-# Runtime dependencies. Streamlit Community Cloud installs from this file.
-anthropic>=0.40
-chromadb>=0.5
-sentence-transformers>=3.0
-pypdf>=5.0
-streamlit>=1.38
-python-dotenv>=1.0
+# Runtime dependencies. Streamlit Community Cloud installs from this file on
+# every redeploy, so each entry carries a major-version cap: patches and minor
+# releases still flow in, but a breaking major can't land without a code change.
+# Floors are the versions this project is developed and tested against.
+anthropic>=1.3,<2
+chromadb>=1.5,<2
+sentence-transformers>=6.0,<7
+pypdf>=6.0,<7
+streamlit>=1.63,<2
+python-dotenv>=1.2,<2
 
 # If ChromaDB fails on the host with "unsupported version of sqlite3",
 # uncomment the line below and add the 3-line pysqlite3 shim at the top of
-# app.py (see the "Deploy" section of the README).
-# pysqlite3-binary>=0.5
+# app.py (see docs/DEPLOYMENT.md).
+# pysqlite3-binary>=0.5,<1
