@@ -23,13 +23,20 @@ SYSTEM_PROMPT = (
     "fall back on outside knowledge.\n"
     "- After each fact, cite the source filename in square brackets, e.g. "
     "[handbook.md].\n"
-    "- Be concise, and quote names and figures exactly as they appear."
+    "- Be concise, and quote names and figures exactly as they appear.\n"
+    "- Do not include internal or system XML tags in your response."
 )
 
 NO_CONTEXT_MESSAGE = (
     "I couldn't find anything relevant in the indexed documents, so I can't "
     "answer that. Try rephrasing, or add documents that cover the topic."
 )
+
+# Grounded extract-and-cite over a handful of retrieved chunks needs no reasoning
+# step, and on current models thinking is *on* unless disabled -- its tokens are
+# billed and count against ``MAX_TOKENS``, which would crowd out the visible
+# answer. Turning it off keeps the whole budget for the answer the user reads.
+THINKING = {"type": "disabled"}
 
 
 @lru_cache(maxsize=1)
@@ -115,6 +122,7 @@ def _stream_from_claude(messages: list[dict]) -> Iterator[str]:
         max_tokens=config.MAX_TOKENS,
         system=SYSTEM_PROMPT,
         messages=messages,
+        thinking=THINKING,
     ) as stream:
         yield from stream.text_stream
 

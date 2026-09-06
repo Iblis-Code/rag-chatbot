@@ -67,6 +67,13 @@ class InMemoryVectorStore(VectorStore):
             for dist, doc, meta in scored[:top_k]
         ]
 
+    def delete_by_source(self, doc_key: str) -> None:
+        self._rows = {
+            id_: row
+            for id_, row in self._rows.items()
+            if row[2].get("doc_key") != doc_key
+        }
+
     def count(self) -> int:
         return len(self._rows)
 

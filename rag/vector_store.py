@@ -52,6 +52,14 @@ class VectorStore(ABC):
         """Number of chunks currently stored."""
 
     @abstractmethod
+    def delete_by_source(self, doc_key: str) -> None:
+        """Remove every chunk that came from the file identified by ``doc_key``.
+
+        Ingestion calls this before re-adding a file so that shrinking a document
+        drops its now-orphaned trailing chunks instead of leaving them behind.
+        """
+
+    @abstractmethod
     def reset(self) -> None:
         """Delete everything in the collection."""
 
@@ -108,6 +116,9 @@ class ChromaVectorStore(VectorStore):
             Retrieved(text=text, metadata=dict(meta or {}), distance=float(dist))
             for text, meta, dist in zip(documents, metadatas, distances)
         ]
+
+    def delete_by_source(self, doc_key: str) -> None:
+        self._collection.delete(where={"doc_key": doc_key})
 
     def count(self) -> int:
         return self._collection.count()

@@ -139,6 +139,8 @@ def test_answer_streams_from_claude_and_reports_sources(store, fake_client):
     assert call["model"] == config.CLAUDE_MODEL
     assert call["system"] == chatbot.SYSTEM_PROMPT
     assert call["max_tokens"] == config.MAX_TOKENS
+    # Thinking is off: its tokens would otherwise be billed and eat MAX_TOKENS.
+    assert call["thinking"] == {"type": "disabled"}
 
 
 def test_sources_are_deduped_in_retrieval_order(store, fake_client):

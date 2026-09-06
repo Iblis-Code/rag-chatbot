@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
+from rag import config
+
 TEXT_EXTENSIONS = {".txt", ".md", ".markdown"}
 PDF_EXTENSIONS = {".pdf"}
 SUPPORTED_EXTENSIONS = TEXT_EXTENSIONS | PDF_EXTENSIONS
@@ -32,12 +34,40 @@ class Document:
     def page(self) -> int | None:
         return self.metadata.get("page")
 
+    @property
+    def doc_key(self) -> str:
+        """Stable identity of the file this text came from.
+
+        ``source`` is the bare filename, which is what citations show -- but two
+        files in different folders can share one. ``doc_key`` is unique per file,
+        and is what chunk IDs and re-ingest deletion key on. Documents built in
+        memory carry no key and fall back to ``source``.
+        """
+        return self.metadata.get("doc_key") or self.source
+
+
+def _doc_key(path: Path) -> str:
+    """Project-relative posix path when possible, else the absolute one.
+
+    Relative keeps the value stable across machines and readable in the store;
+    the absolute fallback keeps files from outside the project unique.
+    """
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(config.PROJECT_ROOT).as_posix()
+    except ValueError:
+        return resolved.as_posix()
+
+
+def _metadata(path: Path) -> dict:
+    return {"source": path.name, "doc_key": _doc_key(path)}
+
 
 def _load_text_file(path: Path) -> list[Document]:
     text = path.read_text(encoding="utf-8", errors="replace")
     if not text.strip():
         return []
-    return [Document(text=text, metadata={"source": path.name})]
+    return [Document(text=text, metadata=_metadata(path))]
 
 
 def _load_pdf_file(path: Path) -> list[Document]:
@@ -54,7 +84,7 @@ def _load_pdf_file(path: Path) -> list[Document]:
         text = page.extract_text() or ""
         if text.strip():
             docs.append(
-                Document(text=text, metadata={"source": path.name, "page": page_number})
+                Document(text=text, metadata={**_metadata(path), "page": page_number})
             )
     return docs
 

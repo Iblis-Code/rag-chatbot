@@ -68,3 +68,55 @@ def test_ingest_paths_reads_from_disk(tmp_path):
     report = ingest_paths(tmp_path, store, embed_fn=hashing_embed, size=200, overlap=20)
     assert report.sources == ["note.md"]
     assert store.count() == report.chunks > 1
+
+
+def test_reingesting_a_shrunken_file_drops_its_stale_chunks():
+    """Upsert alone would leave the old trailing chunks behind, still retrievable."""
+    store = InMemoryVectorStore()
+    meta = {"source": "doc.txt", "doc_key": "notes/doc.txt"}
+
+    ingest_documents(
+        [Document(LONG_BODY, meta)], store, embed_fn=hashing_embed, size=200, overlap=20
+    )
+    assert store.count() > 1
+
+    report = ingest_documents(
+        [Document("word1 word2 word3", meta)], store, embed_fn=hashing_embed, size=200
+    )
+    assert store.count() == report.chunks == 1
+    remaining = [doc for _, doc, _ in store._rows.values()]
+    assert remaining == ["word1 word2 word3"]
+    assert not any("word499" in doc for doc in remaining)
+
+
+def test_same_filename_in_different_folders_does_not_collide():
+    store = InMemoryVectorStore()
+    ingest_documents(
+        [
+            Document("alpha content here", {"source": "notes.md", "doc_key": "a/notes.md"}),
+            Document("beta content here", {"source": "notes.md", "doc_key": "b/notes.md"}),
+        ],
+        store,
+        embed_fn=hashing_embed,
+    )
+
+    assert store.count() == 2
+    assert {doc for _, doc, _ in store._rows.values()} == {
+        "alpha content here",
+        "beta content here",
+    }
+
+
+def test_ingest_paths_records_a_distinct_doc_key_per_file(tmp_path):
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    (tmp_path / "a" / "notes.md").write_text("alpha content", encoding="utf-8")
+    (tmp_path / "b" / "notes.md").write_text("beta content", encoding="utf-8")
+
+    store = InMemoryVectorStore()
+    report = ingest_paths(tmp_path, store, embed_fn=hashing_embed)
+
+    assert report.chunks == store.count() == 2
+    metas = [meta for _, _, meta in store._rows.values()]
+    assert {m["source"] for m in metas} == {"notes.md"}  # citations stay filename-only
+    assert len({m["doc_key"] for m in metas}) == 2  # ...but identity is per-file
