@@ -8,7 +8,7 @@ instance. Configuration values themselves live in [CONFIGURATION.md](CONFIGURATI
 ## Set up the spend backstop first
 
 The demo answers over a public URL on the owner's API key. App-side guardrails
-(rate limits, input caps, the password gate — see [CONFIGURATION.md](CONFIGURATION.md))
+(rate limits, input caps, and optionally a password gate — see [CONFIGURATION.md](CONFIGURATION.md))
 bound the blast radius, but the limit a bug or a scripted abuser **cannot** exceed is set in
 the Anthropic Console. Do this before the app goes live:
 
@@ -33,8 +33,8 @@ That scoped key is the `ANTHROPIC_API_KEY` secret in the next section.
    ```toml
    ANTHROPIC_API_KEY = "sk-ant-..."   # the workspace-scoped key
    # optional guardrail overrides:
-   # APP_PASSWORD = "share-this-with-reviewers"
-   # RATE_LIMIT_PER_HOUR = "60"
+   # APP_PASSWORD = "share-this-with-reviewers"   # omit to leave the app open
+   # RATE_LIMIT_PER_HOUR = "20"
    ```
 5. **Deploy.** First load takes ~1–2 min while the MiniLM model downloads; `data/samples/`
    is indexed automatically on the first run.
@@ -88,32 +88,36 @@ guesswork. **Update this section whenever a setting below changes.**
 - Python version: **3.12** — matches `.python-version`, and deliberately not the 3.14 default
   Streamlit offered, to avoid torch/chromadb wheel issues on a brand-new Python
 - Secrets (Settings → Secrets): `ANTHROPIC_API_KEY` (the `rag-chatbot-demo` key above) and
-  `APP_PASSWORD` (a shared password chosen at deploy time — share it out-of-band with anyone
-  you want to try the app; rotate by editing the same secret)
-- **Viewer access: restricted.** Settings → Sharing is set to specific allowed viewers rather
-  than "anyone with the link" — a deliberate choice while proving things out on the $5 credit,
-  belt-and-suspenders alongside `APP_PASSWORD` and the app's rate limits.
-  **To open it up:** Streamlit app → Settings → Sharing → switch to public / anyone-with-the-link.
-  Nothing else needs to change; `APP_PASSWORD` and the app-side guardrails still apply after
-  that switch.
+  `RATE_LIMIT_PER_HOUR = "20"` (lowered from the code default of 60 — rationale in
+  [CONFIGURATION.md](CONFIGURATION.md#why-the-live-deployment-uses-20-not-60)).
+  `APP_PASSWORD` is **not** set: it gated the app while access was restricted, and was removed
+  when the demo was opened up. Re-adding the secret re-enables the gate with no code change.
+- **Viewer access: public.** Settings → Sharing is set to anyone-with-the-link. It was
+  restricted to named viewers while the deployment was being proven out; that was lifted, and
+  `APP_PASSWORD` was removed at the same time, since a password prompt would have left a
+  reviewer just as stuck as a sharing wall. Cost is now bounded by `RATE_LIMIT_PER_HOUR = 20`,
+  the per-session and input caps, and the workspace spend limit.
+  **To close it again:** flip Sharing back to specific viewers, or re-add the `APP_PASSWORD`
+  secret — either works on its own, neither needs a code change.
 - No `pysqlite3-binary` shim was needed — the build succeeded against ChromaDB as-is on
   Streamlit's current base image. If a future redeploy hits `unsupported version of sqlite3`,
   see the fallback above.
 
 ### Not recorded here, on purpose
 
-The actual API key and `APP_PASSWORD` values, and the exact spend-limit and alert dollar
-amounts. Those live only in the Anthropic Console and Streamlit secrets, never in this repo.
+The actual API key, and the exact spend-limit and alert dollar amounts. Those live only in
+the Anthropic Console and Streamlit secrets, never in this repo. (`APP_PASSWORD` is no longer
+set at all — see above.)
 
 ---
 
 ## Smoke test after a redeploy
 
-> **Due now.** The code review pass that fixed the two ingest bugs, disabled `thinking`, and
-> capped dependency majors has not yet been smoke-tested against the live app. The redeploy
-> reinstalls from the newly capped `requirements.txt` and cold-starts a fresh index, so both
-> the build and the first answer are worth watching. Run the sequence below and update this
-> section with the result.
+> **Due now.** Two rounds of change are live but unverified against the deployed app: the
+> review pass (two ingest bug fixes, `thinking` disabled, dependency majors capped — which
+> means the redeploy reinstalls from a newly resolved dependency set and cold-starts a fresh
+> index), and the access change (public sharing, `APP_PASSWORD` removed,
+> `RATE_LIMIT_PER_HOUR` lowered to 20). Run the sequence below and update this section.
 
 Last run **2026-09-05**, against the deployed app: the `APP_PASSWORD` gate prompted and
 unlocked correctly; a question from `tests/eval_set.json` against the auto-indexed sample docs
@@ -123,7 +127,11 @@ retrieval work for user-supplied documents and not just the bundled samples.
 
 Repeat that sequence any time to confirm a redeploy still works end to end:
 
-1. Password gate → unlock.
+1. Open the link in a private window → expect the chat directly, with no sign-in and no
+   password prompt.
 2. One question from `tests/eval_set.json` → expect a grounded answer citing the right file.
 3. One question the samples cannot answer → expect "I don't know", not a guess.
 4. Optionally, upload a file and ask about it.
+
+The 2026-09-05 run above included a password step that no longer exists; the sequence here is
+the current one.

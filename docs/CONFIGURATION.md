@@ -40,12 +40,27 @@ radius; the hard backstop is the workspace spend limit described in
 
 | Variable | Default | Effect |
 |---|---|---|
-| `RATE_LIMIT_PER_HOUR` | `60` | Hard cap on Claude calls per rolling hour across *all* users of the running app. Over the limit the app shows "demo is busy" and makes no call. On a single-container deploy this is the real spend bound. |
+| `RATE_LIMIT_PER_HOUR` | `60` | Hard cap on Claude calls per rolling hour across *all* users of the running app. Over the limit the app shows "demo is busy" and makes no call. On a single-container deploy this is the real spend bound. **The live deployment overrides this to 20** — see the note below. |
 | `MAX_MESSAGES_PER_SESSION` | `20` | Per-browser-session question cap. Politeness only — a new tab resets it. |
 | `MAX_QUESTION_CHARS` | `600` | Longer questions are rejected inline, before any API call. |
 | `HISTORY_TURNS` | `3` | Only the last N turns are sent to the API, so a long chat doesn't inflate every request. |
 | `MAX_TOKENS` | `768` | Caps output tokens, and so output cost, per answer. |
-| `APP_PASSWORD` | _(unset)_ | When set, the app requires this shared password before showing the uploader or chat. Removes drive-by abuse. |
+| `APP_PASSWORD` | _(unset)_ | When set, the app requires this shared password before showing the uploader or chat. Unset on the live deployment, which is open to anyone with the link. |
+
+### Why the live deployment uses 20, not 60
+
+With no password gate, `RATE_LIMIT_PER_HOUR` and the workspace spend cap are the only things
+between the demo and a scripted client. A question costs roughly **0.6¢ typical, 1.1¢ worst
+case** (~1,600 input tokens against up to 768 output, at Sonnet 5's $2/$10 per MTok), so a $5
+credit buys somewhere between **450 and 870 questions**.
+
+At 60/hour, sustained abuse exhausts that in 8–15 hours; at 20/hour it takes three times as
+long. Genuine reviewer traffic is nowhere near either number, so the lower cap costs real
+users nothing. The failure mode being bought off here isn't an unexpected bill — the spend cap
+already prevents that — it's the demo going dark mid-job-search and staying dark until the
+credit is topped up.
+
+The code default stays 60 for local use; production sets 20 as a Streamlit secret.
 
 ## Design notes
 

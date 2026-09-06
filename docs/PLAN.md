@@ -95,11 +95,14 @@ tasks this section used to track as pending were all completed:
 1. ✅ Repo pushed to public GitHub — [Iblis-Code/rag-chatbot](https://github.com/Iblis-Code/rag-chatbot), branch `main`.
 2. ✅ Dedicated Anthropic Workspace `rag-chatbot-demo` created, with a scoped key, a monthly
    spend limit, and usage alerts. Details in [DEPLOYMENT.md](DEPLOYMENT.md).
-3. ✅ Deployed on Streamlit Community Cloud (Python 3.12, `APP_PASSWORD` set).
+3. ✅ Deployed on Streamlit Community Cloud (Python 3.12; `APP_PASSWORD` was set at the
+   time, and later removed when access was opened up — see below).
 4. ✅ Live URL in the README.
 
-One deliberate open item remains: viewer access on Streamlit Cloud is restricted rather than
-public, while the app proves itself out on a $5 credit. That is a judgement call, not a task.
+Viewer access was restricted while the app proved itself out, then opened: Streamlit sharing
+is public, `APP_PASSWORD` was removed (a password prompt would have blocked a reviewer just as
+effectively as a sharing wall), and `RATE_LIMIT_PER_HOUR` was lowered to 20 in production to
+stretch the credit against scripted traffic. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 Post-deployment changes not in the original plan:
 
@@ -344,6 +347,7 @@ configured is recorded in [DEPLOYMENT.md](DEPLOYMENT.md):
 - Enable **usage alert emails** (e.g. at 50% and 90%).
 - Streamlit Community Cloud: set app visibility / a viewer allowlist under **Settings →
   Sharing** if the demo needn't be fully open; otherwise rely on the guardrails above.
+  (As shipped: opened to the public, relying on the guardrails.)
 - Prompt caching is *not* used — the retrieved context differs on every query, so only the
   ~120-token system prefix is cacheable; not worth the complexity.
 

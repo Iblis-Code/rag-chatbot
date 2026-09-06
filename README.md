@@ -9,9 +9,9 @@ Retrieval is hand-written — no LangChain or LlamaIndex — so every step of th
 is visible and testable.
 
 **Live demo:** [rag-chatbot-project-1.streamlit.app](https://rag-chatbot-project-1.streamlit.app/)
-— ⚠️ **viewer access is currently restricted** to specific Streamlit accounts while the app
-runs on a $5 workspace credit, so a bare link won't open it yet. Opening it up is one switch
-(Settings → Sharing); the app-side guardrails below were built for exactly that.
+— open to anyone with the link, no sign-in and no password. It runs on a small workspace
+credit with a hard spend cap, so if the cap is reached the app stops answering until it's
+topped up. See [Cost & abuse controls](docs/CONFIGURATION.md#cost-and-abuse-guardrails).
 
 <!-- Screenshot pending -- see "Known limitations". Uncomment once the PNG exists, so
      GitHub doesn't render a broken-image icon in the meantime.
@@ -29,8 +29,8 @@ runs on a $5 workspace credit, so a bare link won't open it yet. Opening it up i
 | Sample documents + `tests/eval_set.json` | ✅ 3 demo docs, 11-question eval set (**hit@4 = 1.00, MRR = 1.00**) |
 | GitHub repo | ✅ public — [Iblis-Code/rag-chatbot](https://github.com/Iblis-Code/rag-chatbot), branch `main` |
 | Anthropic Workspace + key | ✅ `rag-chatbot-demo` workspace, scoped key, spend limit + usage alerts |
-| Streamlit Cloud deploy | ✅ live — Python 3.12, `APP_PASSWORD` set. Viewer access deliberately **restricted** while proving things out on the $5 credit; flipping it to public is a one-click change in Settings → Sharing. |
-| Cost & abuse controls | ✅ rate limits, history cap, input cap, password gate — see [docs/CONFIGURATION.md](docs/CONFIGURATION.md) |
+| Streamlit Cloud deploy | ✅ live and **publicly reachable** — Python 3.12, no password gate |
+| Cost & abuse controls | ✅ app-wide rate limit (20/hr in production), per-session cap, input cap, bounded history, workspace spend cap — see [docs/CONFIGURATION.md](docs/CONFIGURATION.md) |
 
 ## Docs
 
@@ -185,9 +185,9 @@ samples until the next restart. Don't upload anything confidential. Per-visitor 
 the first Phase 2 item.
 
 **Uploads are trusted.** An uploaded file's name is used directly as the path it's written to
-under `data/uploads/`, without sanitizing. The container disk is ephemeral and the app is
-access-restricted, so the blast radius is small, but it should be sanitized before the demo
-is opened to the public.
+under `data/uploads/`, without sanitizing. The container disk is ephemeral and rebuilt on
+every restart, which limits the blast radius, but now that the demo is open this is the first
+thing worth hardening.
 
 **Errors are surfaced verbatim.** A failure during retrieval or generation is rendered into
 the chat as `ExceptionType: message`. Good for debugging a demo, too chatty for production.
@@ -195,9 +195,8 @@ the chat as `ExceptionType: message`. Good for debugging a demo, too chatty for 
 **No CI.** Tests, lint, and the `eval_retrieval --min-hit-rate` gate all exist and are wired
 to run, but nothing runs them automatically on push.
 
-**No screenshot yet**, and the live demo is viewer-restricted — so right now neither route
-lets a reviewer see the app running. Fixing either one closes the gap; opening viewer access
-is the better fix, since the guardrails were designed for it.
+**No screenshot yet.** Less pressing now that the live demo is open to anyone with the link,
+but still worth adding for anyone reading the repo without clicking through.
 
 ## Roadmap (Phase 2)
 
