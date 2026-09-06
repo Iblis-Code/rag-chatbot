@@ -96,6 +96,7 @@ project-1/
 ├── .streamlit/
 │   ├── config.toml            # light theme, 25 MB upload cap
 │   └── secrets.toml.example   # secret format for local / Streamlit Cloud
+├── LICENSE                    # MIT
 ├── .env.example
 ├── .python-version            # 3.12, the Streamlit Cloud target
 ├── requirements.txt           # runtime deps
@@ -198,8 +199,6 @@ to run, but nothing runs them automatically on push.
 lets a reviewer see the app running. Fixing either one closes the gap; opening viewer access
 is the better fix, since the guardrails were designed for it.
 
-**No LICENSE**, which by default means all rights reserved. Undecided rather than intentional.
-
 ## Roadmap (Phase 2)
 
 - `PineconeVectorStore` behind a `VECTOR_BACKEND` flag (same interface, no call-site changes)
@@ -207,3 +206,8 @@ is the better fix, since the guardrails were designed for it.
 - Per-visitor document isolation — uploads currently share one collection across all users
 - Inline citation rendering, longer conversation memory, chunk-size tuning from the eval
 - Dockerfile + CI (pytest + ruff + the `eval_retrieval --min-hit-rate` gate)
+
+## License
+
+[MIT](LICENSE) — use it, fork it, borrow from it. The sample documents under
+`data/samples/` are fictional and were written for this demo.
