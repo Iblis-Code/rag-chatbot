@@ -1,5 +1,14 @@
 # Plan: RAG Chatbot ("Chat with your documents")
 
+> **Historical record.** This is the build plan as written before and during
+> implementation. Everything in it shipped, and the project is deployed. Where this
+> document and the code disagree, **the code wins** — the per-step specs below were not
+> rewritten as the implementation evolved (see "Deviations" for the corrections).
+>
+> For current state, read: [README](../README.md) (what it is and how to run it),
+> [CONFIGURATION.md](CONFIGURATION.md) (settings and defaults), and
+> [DEPLOYMENT.md](DEPLOYMENT.md) (how it is deployed and what is configured).
+
 ## Context
 
 This is the first portfolio project for an AI Engineer portfolio. Goal: a chatbot that
@@ -46,7 +55,7 @@ same reason.
 | 9 | `scripts/ingest_cli.py`, `scripts/eval_retrieval.py` | ✅ done (`tests/test_scripts.py`); eval reports hit@k **and** MRR |
 | 10 | `tests/` | ✅ 60 passing; `tests/helpers.py` holds the torch-free test doubles; `tests/conftest.py` isolates ChromaDB to a temp dir; `tests/test_smoke.py` is a real ChromaDB round-trip |
 | 11 | `data/samples/`, `tests/eval_set.json`, README, `.env.example` | ✅ done — 3 fictional Acme docs (handbook / analytics FAQ / security policy) + an 11-question eval set. Real-embedding run: **hit@4 = 1.00, MRR = 1.00** (9 chunks from 3 files). |
-| 12 | Deployment | ✅ config done — split `requirements.txt` / `requirements-dev.txt`, `.python-version` (3.12), `.streamlit/secrets.toml.example`, README "Deploy" section with the sqlite shim fallback. The actual publish is a manual GitHub push + Streamlit Cloud click-through. |
+| 12 | Deployment | ✅ config done — split `requirements.txt` / `requirements-dev.txt`, `.python-version` (3.12), `.streamlit/secrets.toml.example`, and the deploy walkthrough (now in `docs/DEPLOYMENT.md`) with the sqlite shim fallback. Published and live. |
 | 13 | Cost controls & abuse protection — `rag/config.py`, `rag/chatbot.py`, `app.py`, `tests/` | ✅ done (`tests/test_app.py`, `tests/test_chatbot.py`; +7 tests, 60 total). App-side guardrails shipped; the Console spend-limit runbook is a manual deploy step (see step 13). |
 
 Deviations from the plan as written:
@@ -78,54 +87,67 @@ Deviations from the plan as written:
   long-question and rate-limit checks short-circuit before any message is appended to
   `st.session_state`. `+7` tests (3 in `test_chatbot.py`, 4 in `test_app.py`) → 60.
 
-## Resuming (after a context-window clear)
+## Where this ended up
 
-State as of 2026-09-02: **all 13 plan steps implemented, tested, documented.**
-`pytest` = 60 passing. Nothing is left to build. Step 13 (cost controls & abuse
-protection) shipped the app-side guardrails; the only remaining pre-deploy task is the
-**manual** one — deployment (step 12) must not go live until a monthly spend limit is set
-on a dedicated Anthropic Workspace (step 13, "Ops backstop").
+**All 13 plan steps are implemented, tested, and deployed.** The four manual, outward-facing
+tasks this section used to track as pending were all completed:
+
+1. ✅ Repo pushed to public GitHub — [Iblis-Code/rag-chatbot](https://github.com/Iblis-Code/rag-chatbot), branch `main`.
+2. ✅ Dedicated Anthropic Workspace `rag-chatbot-demo` created, with a scoped key, a monthly
+   spend limit, and usage alerts. Details in [DEPLOYMENT.md](DEPLOYMENT.md).
+3. ✅ Deployed on Streamlit Community Cloud (Python 3.12, `APP_PASSWORD` set).
+4. ✅ Live URL in the README.
+
+One deliberate open item remains: viewer access on Streamlit Cloud is restricted rather than
+public, while the app proves itself out on a $5 credit. That is a judgement call, not a task.
+
+Post-deployment changes not in the original plan:
+
+- **`thinking` is explicitly disabled** on the Messages API call. Omitting the parameter
+  leaves adaptive thinking on, whose tokens are billed *and* counted against `MAX_TOKENS`
+  (768) — paying for reasoning nobody sees and risking a truncated answer. See
+  [CONFIGURATION.md](CONFIGURATION.md) § Design notes.
+- **Chunk IDs key on `doc_key`, not `source`.** `source` is the bare filename, so
+  `a/notes.md` and `b/notes.md` hashed to identical IDs and silently overwrote each other.
+  `Document.doc_key` is the file's path (project-relative when possible); `source` still
+  carries the filename for citations.
+- **Ingestion deletes before it upserts.** Upsert alone never removes anything, so editing a
+  document *down* left its old trailing chunks in the store as retrievable stale text.
+  `VectorStore.delete_by_source(doc_key)` is called for each file before its new chunks land.
+- **Dependencies carry major-version caps** (`anthropic>=1.3,<2`, etc.) so a Streamlit Cloud
+  redeploy cannot pull a breaking major without a code change.
 
 Local environment:
 
 - `.venv/` here has the **full** runtime + dev deps installed (torch 2.13, chromadb,
-  sentence-transformers, anthropic, streamlit). Interpreter is Python 3.14.
-- Tests: `.\.venv\Scripts\python.exe -m pytest -q`
+  sentence-transformers, anthropic 1.x, streamlit). Interpreter is Python 3.14.
+- Tests: `.\.venv\Scripts\python.exe -m pytest -q` — 63 passing.
 - App: set `ANTHROPIC_API_KEY`, then `.\.venv\Scripts\python.exe -m streamlit run app.py`
 - The test suite redirects ChromaDB to a temp dir (`tests/conftest.py`). Running
   `scripts/*` or the app directly creates `./chroma_db/` in the repo (gitignored).
 
 Verified end-to-end: real ingest of `data/samples/` = 9 chunks / 3 files;
-`python -m scripts.eval_retrieval` = **hit@4 = 1.00, MRR = 1.00**; `pytest -q` = 60
-passing; a real `streamlit run` boots clean (HTTP 200), including with `APP_PASSWORD`
-and `RATE_LIMIT_PER_HOUR` set.
+`python -m scripts.eval_retrieval` = **hit@4 = 1.00, MRR = 1.00**; `pytest -q` = 63 passing;
+a real `streamlit run` boots clean, including with `APP_PASSWORD` and `RATE_LIMIT_PER_HOUR` set.
 
-Left to do — manual, outward-facing only (all code, incl. step 13, is done and tested):
-
-1. `git init`, commit, push to a **public** GitHub repo (repo is not under git yet).
-2. Create an Anthropic **Workspace** for this app, mint an API key scoped to it, and set a
-   monthly spend limit + usage alert emails on it (see step 13 / README "Cost & abuse
-   controls"). This is the backstop the deploy must not go live without.
-3. Deploy on [share.streamlit.io](https://share.streamlit.io): main file `app.py`,
-   Python 3.12, add the Workspace-scoped `ANTHROPIC_API_KEY` secret, plus the optional
-   `APP_PASSWORD` / rate-limit overrides. See README "Deploy".
-4. Paste the live URL into the README "Live demo" line.
-
-Orientation: usage → `README.md`; settings/defaults → `rag/config.py`; RAG entry
-point → `rag.chatbot.answer()`; torch-free test doubles → `tests/helpers.py`;
-future work → README "Roadmap" and the "Phase 2" section below.
+Orientation: usage → [README](../README.md); settings/defaults → `rag/config.py` and
+[CONFIGURATION.md](CONFIGURATION.md); ops → [DEPLOYMENT.md](DEPLOYMENT.md); RAG entry
+point → `rag.chatbot.answer()`; torch-free test doubles → `tests/helpers.py`.
 
 ## Tech stack / dependencies (`requirements.txt`)
 
 ```
-anthropic>=0.40
-chromadb>=0.5
-sentence-transformers>=3.0
-pypdf>=5.0
-streamlit>=1.38
-python-dotenv>=1.0
-pytest>=8.0            # dev
+anthropic>=1.3,<2
+chromadb>=1.5,<2
+sentence-transformers>=6.0,<7
+pypdf>=6.0,<7
+streamlit>=1.63,<2
+python-dotenv>=1.2,<2
+pytest>=9.0,<10        # dev
 ```
+
+(Originally written with open lower bounds; major-version caps were added later so a
+Streamlit Cloud redeploy can't pull a breaking major on its own.)
 
 Note: `sentence-transformers` pulls in `torch` (CPU wheel is fine). First run downloads
 the ~90 MB MiniLM model and caches it.
@@ -165,7 +187,14 @@ project-1/
 
 ## Implementation steps
 
+> These per-step specs were **not** updated as the code evolved. Steps 7, 9, and 10 in
+> particular describe a pre-refactor API. Read "Deviations from the plan as written" above
+> for the corrections, or just read the code.
+
 ### 1. `rag/config.py`
+
+> Current defaults and their rationale live in [CONFIGURATION.md](CONFIGURATION.md); the
+> list below is what was originally specified.
 Load `.env` via `python-dotenv`; also fall back to `st.secrets` when running on Streamlit
 Cloud (guard the import). Expose: `ANTHROPIC_API_KEY`, `CLAUDE_MODEL` (default
 `claude-sonnet-5`), `EMBED_MODEL` (default `sentence-transformers/all-MiniLM-L6-v2`),
@@ -300,12 +329,13 @@ scripted client on the single Streamlit container is tens of dollars per hour. T
   gate blocking `chat_input` (extend `tests/test_app.py` `AppTest`). All torch-free / no
   API key, consistent with the existing suite.
 
-**Ops backstop (Anthropic Console — deploy runbook, not code):**
+**Ops backstop (Anthropic Console — deploy runbook, not code).** What was actually
+configured is recorded in [DEPLOYMENT.md](DEPLOYMENT.md):
 
 - Create a dedicated **Workspace** for this app; mint an API key scoped to it so it can be
   revoked or capped without touching anything else. That scoped key is the
   `ANTHROPIC_API_KEY` Streamlit secret.
-- Set a **monthly spend limit** on the Workspace (start $10–25). When it is hit the key
+- Set a **monthly spend limit** on the Workspace. When it is hit the key
   errors and the app stops answering — the bill cannot exceed it.
 - Enable **usage alert emails** (e.g. at 50% and 90%).
 - Streamlit Community Cloud: set app visibility / a viewer allowlist under **Settings →
@@ -313,9 +343,10 @@ scripted client on the single Streamlit container is tens of dollars per hour. T
 - Prompt caching is *not* used — the retrieved context differs on every query, so only the
   ~120-token system prefix is cacheable; not worth the complexity.
 
-Deployment (step 12) must not go live until the Workspace spend limit is in place.
+Deployment (step 12) was gated on the Workspace spend limit being in place first. It is
+now; see [DEPLOYMENT.md](DEPLOYMENT.md) for what was actually configured.
 
-## Phase 2 (documented in README, not built now)
+## Phase 2 (not built; the live list is the README's Roadmap)
 
 - `PineconeVectorStore` behind a `VECTOR_BACKEND=chroma|pinecone` env flag (same
   `VectorStore` ABC, no call-site changes).
@@ -329,9 +360,9 @@ Run from the project root (PowerShell):
 
 1. `python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -r requirements.txt`
 2. `Copy-Item .env.example .env` then put a real `ANTHROPIC_API_KEY` in `.env`.
-3. `python -m scripts.ingest_cli data/samples` -> prints e.g. `Ingested 42 chunks from 3 files`.
-4. `python -m scripts.eval_retrieval` -> prints `hit@4 = 0.9` (expect >= 0.8 on samples;
-   if lower, adjust `CHUNK_SIZE` / `CHUNK_OVERLAP` / `TOP_K` in `config.py`).
+3. `python -m scripts.ingest_cli data/samples` -> prints `Ingested 9 chunks from 3 file(s)`.
+4. `python -m scripts.eval_retrieval` -> prints `hit@4 = 1.00, MRR = 1.00` on the samples
+   (expect >= 0.8; if lower, adjust `CHUNK_SIZE` / `CHUNK_OVERLAP` / `TOP_K`).
 5. `streamlit run app.py`:
    - Ask a question answerable from the samples -> answer streams in, "Sources" expander
      lists the right file(s).
