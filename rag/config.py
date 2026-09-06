@@ -30,7 +30,15 @@ except ModuleNotFoundError:  # pragma: no cover - exercised only without the dep
 
 
 def _from_secrets(key: str) -> str | None:
-    """Look ``key`` up in ``st.secrets``; return None unless Streamlit is loaded."""
+    """Look ``key`` up in ``st.secrets``; return None unless Streamlit is loaded.
+
+    The ``sys.modules`` check is what keeps plain CLI use from importing Streamlit,
+    and it is safe under ``streamlit run``: the Streamlit CLI has already imported
+    the package by the time its ScriptRunner ``exec``s the app script, in the same
+    process. So secrets resolve here no matter where ``rag.config`` sits in
+    ``app.py``'s import block. Import ``rag.config`` from a non-Streamlit process
+    and secrets are skipped by design -- use environment variables or ``.env`` there.
+    """
     if "streamlit" not in sys.modules:
         return None
     try:
@@ -58,6 +66,16 @@ def _get_int(key: str, default: int) -> int:
         return int(str(raw).strip())
     except ValueError as exc:
         raise ValueError(f"Config {key!r} must be an integer, got {raw!r}") from exc
+
+
+def _get_float(key: str, default: float) -> float:
+    raw = _get(key)
+    if raw is None or str(raw).strip() == "":
+        return default
+    try:
+        return float(str(raw).strip())
+    except ValueError as exc:
+        raise ValueError(f"Config {key!r} must be a number, got {raw!r}") from exc
 
 
 # --- Secrets ---------------------------------------------------------------
@@ -92,6 +110,14 @@ CHROMA_DIR = _chroma_dir
 CHUNK_SIZE = _get_int("CHUNK_SIZE", 800)
 CHUNK_OVERLAP = _get_int("CHUNK_OVERLAP", 150)
 TOP_K = _get_int("TOP_K", 4)
+# Cosine distance (0 = identical, 2 = opposite) beyond which the nearest chunk is
+# treated as "nothing relevant found", so the app declines instead of asking Claude
+# to answer from unrelated context. Measured against the sample docs with the
+# default embedding model: answerable questions peak at 0.63, off-topic ones bottom
+# out at 0.79. 0.75 sits in that gap, leaning permissive -- a wrongly-refused
+# question is a worse failure than one weak call the system prompt declines anyway.
+# The scale is model-specific: re-measure if EMBED_MODEL changes. Set 2.0 to disable.
+MAX_DISTANCE = _get_float("MAX_DISTANCE", 0.75)
 
 # --- Paths ------------------------------------------------------------
 DATA_DIR = PROJECT_ROOT / "data"
@@ -109,6 +135,8 @@ if CHUNK_OVERLAP >= CHUNK_SIZE:
     )
 if TOP_K < 1:
     raise ValueError(f"TOP_K must be >= 1, got {TOP_K}")
+if not 0 < MAX_DISTANCE <= 2:
+    raise ValueError(f"MAX_DISTANCE must be in (0, 2], got {MAX_DISTANCE}")
 if MAX_TOKENS < 1:
     raise ValueError(f"MAX_TOKENS must be >= 1, got {MAX_TOKENS}")
 if HISTORY_TURNS < 0:

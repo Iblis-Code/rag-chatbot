@@ -3,6 +3,10 @@
 ``answer()`` retrieves eagerly (so the caller can show sources immediately) and
 returns a lazy token ``stream`` that calls the Claude API only when iterated --
 which is exactly what ``st.write_stream`` wants.
+
+Grounding is enforced twice: a distance threshold decides whether anything relevant
+was retrieved at all (:func:`is_relevant`), and the system prompt confines the answer
+to what did come back.
 """
 
 from __future__ import annotations
@@ -72,6 +76,19 @@ def retrieve(
     return store.query(vector, top_k or config.TOP_K)
 
 
+def is_relevant(chunks: Sequence[Retrieved], max_distance: float | None = None) -> bool:
+    """True when the closest retrieved chunk is near enough to be worth answering from.
+
+    Similarity search always returns its top-k, however poor the match, so without
+    this gate an off-topic question still reaches Claude with unrelated context and
+    is answered -- or refused -- at the cost of a full API call. Testing only the
+    nearest chunk keeps the decision to "is anything here relevant at all?" and
+    leaves the context itself untouched; ``VectorStore.query`` returns closest-first.
+    """
+    max_distance = config.MAX_DISTANCE if max_distance is None else max_distance
+    return bool(chunks) and chunks[0].distance <= max_distance
+
+
 def format_context(chunks: Sequence[Retrieved]) -> str:
     blocks = []
     for i, chunk in enumerate(chunks, start=1):
@@ -138,10 +155,15 @@ def answer(
     history: Sequence[dict] | None = None,
     top_k: int | None = None,
     embed_fn: EmbedQueryFn | None = None,
+    max_distance: float | None = None,
 ) -> RagResponse:
-    """Retrieve context for ``question`` and prepare a grounded answer stream."""
+    """Retrieve context for ``question`` and prepare a grounded answer stream.
+
+    Returns the canned :data:`NO_CONTEXT_MESSAGE` -- without calling Claude -- when
+    the index is empty or nothing retrieved is close enough to be relevant.
+    """
     chunks = retrieve(question, store, top_k, embed_fn)
-    if not chunks:
+    if not is_relevant(chunks, max_distance):
         return RagResponse(question, [], _static_stream(NO_CONTEXT_MESSAGE), [])
 
     ordered_sources = list(dict.fromkeys(c.source for c in chunks if c.source))

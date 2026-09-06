@@ -64,8 +64,12 @@ def ingest_documents(
     ids: list[str] = []
     texts: list[str] = []
     metadatas: list[dict] = []
+    # Display names for the report line -- two files can share one, which is why
+    # they cannot be counted. `seen_keys` is the distinct-file count; `chunked_keys`
+    # is the subset that produced chunks, and so the set to clear before upserting.
     seen_sources: list[str] = []
     seen_keys: list[str] = []
+    chunked_keys: list[str] = []
     index_by_key: dict[tuple[str, object], int] = {}
 
     for doc in documents:
@@ -73,9 +77,11 @@ def ingest_documents(
         doc_key = doc.doc_key or source
         if source not in seen_sources:
             seen_sources.append(source)
+        if doc_key not in seen_keys:
+            seen_keys.append(doc_key)
         for chunk in chunk_text(doc.text, size, overlap):
-            if doc_key not in seen_keys:
-                seen_keys.append(doc_key)
+            if doc_key not in chunked_keys:
+                chunked_keys.append(doc_key)
             key = (doc_key, doc.page)
             index = index_by_key.get(key, 0)
             index_by_key[key] = index + 1
@@ -94,7 +100,7 @@ def ingest_documents(
         # Drop each file's previous chunks before re-adding it, so a document that
         # shrank does not leave orphaned trailing chunks behind. Keys are collected
         # during chunking, so a document that yielded nothing never clears itself.
-        for doc_key in seen_keys:
+        for doc_key in chunked_keys:
             store.delete_by_source(doc_key)
         store.add(
             ids=ids,
@@ -104,7 +110,7 @@ def ingest_documents(
         )
 
     return IngestReport(
-        files=len(seen_sources),
+        files=len(seen_keys),
         documents=len(documents),
         chunks=len(ids),
         sources=seen_sources,

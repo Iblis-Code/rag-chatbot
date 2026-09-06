@@ -25,7 +25,7 @@ topped up. See [Cost & abuse controls](docs/CONFIGURATION.md#cost-and-abuse-guar
 | Config, loaders, chunker, embeddings, vector store, ingest, chatbot | ✅ implemented + unit tested |
 | Streamlit UI (`app.py`) | ✅ implemented + smoke tested (`AppTest`) |
 | CLI scripts (`scripts/ingest_cli.py`, `scripts/eval_retrieval.py`) | ✅ implemented + tested |
-| Test suite | ✅ `pytest`, **63/63 passing** |
+| Test suite | ✅ `pytest`, **68/68 passing** |
 | Sample documents + `tests/eval_set.json` | ✅ 3 demo docs, 11-question eval set (**hit@4 = 1.00, MRR = 1.00**) |
 | GitHub repo | ✅ public — [Iblis-Code/rag-chatbot](https://github.com/Iblis-Code/rag-chatbot), branch `main` |
 | Anthropic Workspace + key | ✅ `rag-chatbot-demo` workspace, scoped key, spend limit + usage alerts |
@@ -49,6 +49,8 @@ topped up. See [Cost & abuse controls](docs/CONFIGURATION.md#cost-and-abuse-guar
                                                                       ▼
         question ──▶ embed ──▶ similarity search (top-k) ──▶ relevant chunks
                                                                       │
+                          nearest chunk too far? ──▶ decline, no API call
+                                                                      │
                                       chunks + question + history ──▶ Claude
                                                                       │
                                                                       ▼
@@ -67,9 +69,15 @@ topped up. See [Cost & abuse controls](docs/CONFIGURATION.md#cost-and-abuse-guar
   path rather than its bare name, so same-named files in different folders don't
   collide. Re-ingesting a file deletes its previous chunks before writing the new
   ones, so editing a document down doesn't leave stale text behind.
+- **Relevance gate** (`rag/chatbot.py`) — similarity search always returns its top-k
+  however poor the match, so the nearest chunk is checked against `MAX_DISTANCE`
+  (0.75 cosine) first. Off-topic questions are declined *before* any API call rather
+  than costing one. The threshold was measured, not guessed — see
+  [docs/CONFIGURATION.md](docs/CONFIGURATION.md#design-notes).
 - **Generation** (`rag/chatbot.py`) — Claude via the official `anthropic` SDK,
   streamed. Retrieval happens eagerly (sources shown immediately); the token
-  stream is lazy. If nothing relevant is retrieved, it says so instead of guessing.
+  stream is lazy. Grounding is enforced twice: by the distance gate above, and by a
+  system prompt that confines the answer to the retrieved context.
 
 ## Project layout
 
@@ -88,7 +96,7 @@ project-1/
 │   ├── ingest_cli.py          # python -m scripts.ingest_cli data/samples
 │   └── eval_retrieval.py      # hit@k + MRR over a small Q->source set
 ├── data/samples/              # committed demo docs, auto-indexed on first run
-├── tests/                     # 63 tests
+├── tests/                     # 68 tests
 │   ├── conftest.py            #   isolates ChromaDB to a temp dir per test
 │   ├── helpers.py             #   test doubles (deterministic embedder, in-mem store)
 │   ├── eval_set.json          #   11 question -> expected-source pairs

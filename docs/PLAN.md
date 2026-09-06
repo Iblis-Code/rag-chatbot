@@ -123,6 +123,22 @@ Post-deployment changes not in the original plan:
   double as the rest of the suite. 60 -> 63 tests, ~40s -> ~10s.
 - **Dependencies carry major-version caps** (`anthropic>=1.3,<2`, etc.) so a Streamlit Cloud
   redeploy cannot pull a breaking major without a code change.
+- **Retrieval has a relevance threshold** (`MAX_DISTANCE`, 0.75 cosine). Similarity search
+  always returns its top-k however poor the match, so grounding was previously enforced only
+  by the system prompt: an off-topic question still reached Claude and cost a full API call
+  to be refused. `chatbot.is_relevant()` now gates on the nearest chunk. The default was
+  measured against the sample docs rather than guessed — answerable questions peak at 0.63,
+  off-topic ones bottom out at 0.79. `scripts/eval_retrieval.py` deliberately skips the gate
+  so the eval keeps measuring pure ranking. 63 -> 68 tests.
+- **`IngestReport.files` counts distinct files, not filenames.** It was counting unique
+  `source` values, so ingesting `a/notes.md` and `b/notes.md` together reported "1 file"
+  while correctly storing two. The last place `source` was used where `doc_key` was meant;
+  the report line still lists display names, which is what `source` is for.
+- **Verified, not changed:** `rag/config.py` reads `st.secrets` only when `"streamlit" in
+  sys.modules`, which looks like it depends on `app.py`'s import order. It does not — the
+  Streamlit CLI has already imported the package before its ScriptRunner `exec`s the app
+  script in the same process. The guard is what keeps CLI use from importing Streamlit; the
+  reasoning is now recorded in the function's docstring so it isn't re-litigated.
 
 Local environment:
 
@@ -134,7 +150,7 @@ Local environment:
   `scripts/*` or the app directly creates `./chroma_db/` in the repo (gitignored).
 
 Verified end-to-end: real ingest of `data/samples/` = 9 chunks / 3 files;
-`python -m scripts.eval_retrieval` = **hit@4 = 1.00, MRR = 1.00**; `pytest -q` = 63 passing;
+`python -m scripts.eval_retrieval` = **hit@4 = 1.00, MRR = 1.00**; `pytest -q` = 68 passing;
 a real `streamlit run` boots clean, including with `APP_PASSWORD` and `RATE_LIMIT_PER_HOUR` set.
 
 Orientation: usage → [README](../README.md); settings/defaults → `rag/config.py` and

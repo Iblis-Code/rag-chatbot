@@ -154,3 +154,37 @@ def test_sources_are_deduped_in_retrieval_order(store, fake_client):
         "capital of France?", store, embed_fn=hashing_embed, top_k=5
     )
     assert response.sources.count("geo.md") == 1
+
+
+# --- Relevance threshold --------------------------------------------------
+
+def test_is_relevant_gates_on_the_nearest_chunk():
+    near = Retrieved("ctx", {"source": "a.md"}, 0.4)
+    far = Retrieved("ctx", {"source": "b.md"}, 0.9)
+    assert chatbot.is_relevant([near, far], max_distance=0.75)
+    assert not chatbot.is_relevant([far, near], max_distance=0.75)
+    assert not chatbot.is_relevant([], max_distance=0.75)
+
+
+def test_off_topic_question_is_declined_without_calling_claude(store, fake_client):
+    """Nothing in `store` is close to this, so it must not reach the API."""
+    response = chatbot.answer("anything", store, embed_fn=hashing_embed)
+
+    assert response.chunks == []          # no Sources panel for a declined answer
+    assert response.sources == []
+    assert "".join(response.stream) == chatbot.NO_CONTEXT_MESSAGE
+    assert fake_client.messages.calls == []
+
+
+def test_raising_max_distance_lets_a_weak_match_through(store, fake_client):
+    response = chatbot.answer(
+        "anything", store, embed_fn=hashing_embed, max_distance=2.0
+    )
+    assert response.chunks
+    assert "".join(response.stream) == "Paris is the capital [geo.md]."
+    assert len(fake_client.messages.calls) == 1
+
+
+def test_threshold_defaults_to_config(monkeypatch, store, fake_client):
+    monkeypatch.setattr(config, "MAX_DISTANCE", 2.0)
+    assert chatbot.answer("anything", store, embed_fn=hashing_embed).chunks

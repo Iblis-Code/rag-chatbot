@@ -26,6 +26,7 @@ Copy-paste templates live in [`.env.example`](../.env.example) (local) and
 | `CHUNK_SIZE` | `800` | Max characters per chunk, excluding the overlap prefix. |
 | `CHUNK_OVERLAP` | `150` | Characters of the previous chunk prepended to each following chunk, so context survives a boundary. Must be smaller than `CHUNK_SIZE`. |
 | `TOP_K` | `4` | Chunks retrieved per question and passed to the model as context. |
+| `MAX_DISTANCE` | `0.75` | Cosine distance beyond which the nearest retrieved chunk counts as irrelevant, and the app declines without calling Claude. See below. `2.0` disables the check. |
 
 Use `python -m scripts.eval_retrieval` to tune `CHUNK_SIZE` / `CHUNK_OVERLAP` / `TOP_K`
 against a real measurement rather than by feel.
@@ -73,6 +74,32 @@ extract-and-cite over four retrieved chunks there is nothing to reason about, so
 would pay for reasoning nobody sees and risk truncating the answer before it finishes. If you
 raise `MAX_TOKENS` substantially and start asking multi-hop questions, this is the first
 setting worth revisiting.
+
+**The relevance threshold is measured, not guessed.** Similarity search always returns
+its top-k, however poor the match — so without a cutoff an off-topic question still reaches
+Claude with unrelated context, and costs a full API call to be refused. `MAX_DISTANCE` gates
+on the *nearest* chunk only: it decides whether anything relevant was found at all, and
+leaves the retrieved context itself untouched, so nothing changes for questions the app does
+answer.
+
+The default comes from measuring the bundled sample docs with `all-MiniLM-L6-v2`:
+
+| Question set | Top-1 cosine distance |
+|---|---|
+| The 11 answerable questions in `tests/eval_set.json` | 0.39 – **0.63** |
+| 7 clearly off-topic questions (capitals, recipes, sport, gibberish) | **0.79** – 0.98 |
+| Acme-flavoured questions the docs cannot answer ("who is the CEO?") | 0.52 – 0.66 |
+
+`0.75` sits in the 0.63 / 0.79 gap, deliberately nearer the top of the answerable band: a
+wrongly-refused question is a worse failure than one weak call that the system prompt
+declines anyway. The third row is the honest limit — questions that *sound* like the corpus
+but aren't answered by it land inside the answerable band, and no distance threshold
+separates them. Those are still the system prompt's job, which is why grounding is enforced
+in both places.
+
+The scale is specific to the embedding model. **Change `EMBED_MODEL` and this must be
+re-measured**, since a different model's distances are not comparable. `scripts/eval_retrieval.py`
+deliberately does *not* apply the threshold, so the eval keeps measuring pure ranking quality.
 
 **Prompt caching is not used.** The retrieved context differs on every query, so only the
 ~120-token system prefix is cacheable — below the minimum cacheable prefix, and not worth the

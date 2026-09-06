@@ -120,3 +120,15 @@ def test_ingest_paths_records_a_distinct_doc_key_per_file(tmp_path):
     metas = [meta for _, _, meta in store._rows.values()]
     assert {m["source"] for m in metas} == {"notes.md"}  # citations stay filename-only
     assert len({m["doc_key"] for m in metas}) == 2  # ...but identity is per-file
+
+
+def test_report_counts_distinct_files_not_filenames():
+    """Two files can share a name; the report counts files, not labels."""
+    docs = [
+        Document("Alpha text here.", {"source": "notes.md", "doc_key": "a/notes.md"}),
+        Document("Beta text here.", {"source": "notes.md", "doc_key": "b/notes.md"}),
+    ]
+    report = ingest_documents(docs, InMemoryVectorStore(), hashing_embed)
+
+    assert report.files == 2
+    assert report.sources == ["notes.md"]  # the shared display name, listed once
