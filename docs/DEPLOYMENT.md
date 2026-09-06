@@ -109,6 +109,12 @@ amounts. Those live only in the Anthropic Console and Streamlit secrets, never i
 
 ## Smoke test after a redeploy
 
+> **Due now.** The code review pass that fixed the two ingest bugs, disabled `thinking`, and
+> capped dependency majors has not yet been smoke-tested against the live app. The redeploy
+> reinstalls from the newly capped `requirements.txt` and cold-starts a fresh index, so both
+> the build and the first answer are worth watching. Run the sequence below and update this
+> section with the result.
+
 Last run **2026-09-05**, against the deployed app: the `APP_PASSWORD` gate prompted and
 unlocked correctly; a question from `tests/eval_set.json` against the auto-indexed sample docs
 returned a grounded answer with the correct file cited in Sources; the sidebar uploader was

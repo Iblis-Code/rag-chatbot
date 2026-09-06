@@ -114,6 +114,10 @@ Post-deployment changes not in the original plan:
 - **Ingestion deletes before it upserts.** Upsert alone never removes anything, so editing a
   document *down* left its old trailing chunks in the store as retrievable stale text.
   `VectorStore.delete_by_source(doc_key)` is called for each file before its new chunks land.
+- **The test suite is genuinely torch-free.** `tests/test_app.py` was still loading the real
+  ~90 MB embedding model on each of its seven tests, which made it fail intermittently on a
+  cold cache against the 30s `AppTest` timeout. It now uses the same deterministic hashing
+  double as the rest of the suite. 60 -> 63 tests, ~40s -> ~10s.
 - **Dependencies carry major-version caps** (`anthropic>=1.3,<2`, etc.) so a Streamlit Cloud
   redeploy cannot pull a breaking major without a code change.
 

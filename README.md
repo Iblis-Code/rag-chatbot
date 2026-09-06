@@ -10,11 +10,11 @@ is visible and testable.
 
 **Live demo:** [rag-chatbot-project-1.streamlit.app](https://rag-chatbot-project-1.streamlit.app/)
 — ⚠️ **viewer access is currently restricted** to specific Streamlit accounts while the app
-runs on a $5 workspace credit, so a bare link won't open it yet. See the screenshot below.
+runs on a $5 workspace credit, so a bare link won't open it yet. Opening it up is one switch
+(Settings → Sharing); the app-side guardrails below were built for exactly that.
 
-<!-- TODO: capture a screenshot of the running app (a question answered, with the Sources
-     panel open) into docs/images/screenshot.png, then uncomment the line below.
-     Until then it stays commented out so GitHub doesn't render a broken-image icon.
+<!-- Screenshot pending -- see "Known limitations". Uncomment once the PNG exists, so
+     GitHub doesn't render a broken-image icon in the meantime.
 ![The chat UI, showing a grounded answer and its Sources panel](docs/images/screenshot.png)
 -->
 
@@ -172,6 +172,33 @@ chunking.
 test that would otherwise hit the embedding model uses a deterministic hashing double
 (`tests/helpers.py`), so the whole suite runs in seconds and is reproducible offline. Tests
 that need a missing optional dependency skip themselves.
+
+## Known limitations
+
+Deliberate scope boundaries for a demo, written down rather than left as surprises.
+
+**Uploaded documents are shared between visitors.** The app keeps one Chroma collection per
+server process, so anything you upload through the sidebar is retrievable by anyone else
+using the same instance, and **Clear index** empties it for everyone — including the bundled
+samples until the next restart. Don't upload anything confidential. Per-visitor isolation is
+the first Phase 2 item.
+
+**Uploads are trusted.** An uploaded file's name is used directly as the path it's written to
+under `data/uploads/`, without sanitizing. The container disk is ephemeral and the app is
+access-restricted, so the blast radius is small, but it should be sanitized before the demo
+is opened to the public.
+
+**Errors are surfaced verbatim.** A failure during retrieval or generation is rendered into
+the chat as `ExceptionType: message`. Good for debugging a demo, too chatty for production.
+
+**No CI.** Tests, lint, and the `eval_retrieval --min-hit-rate` gate all exist and are wired
+to run, but nothing runs them automatically on push.
+
+**No screenshot yet**, and the live demo is viewer-restricted — so right now neither route
+lets a reviewer see the app running. Fixing either one closes the gap; opening viewer access
+is the better fix, since the guardrails were designed for it.
+
+**No LICENSE**, which by default means all rights reserved. Undecided rather than intentional.
 
 ## Roadmap (Phase 2)
 
