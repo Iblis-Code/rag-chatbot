@@ -211,7 +211,7 @@ Cloud (guard the import). Expose: `ANTHROPIC_API_KEY`, `CLAUDE_MODEL` (default
 
 Step 13 adds cost-control settings, all resolved through the same env → `st.secrets` →
 default chain: `HISTORY_TURNS` (default 3), `MAX_QUESTION_CHARS` (default 600),
-`MAX_MESSAGES_PER_SESSION` (default 20), `RATE_LIMIT_PER_HOUR` (default 60),
+`MAX_MESSAGES_PER_SESSION` (default 20), `RATE_LIMIT_PER_HOUR` (default 20, originally 60),
 `APP_PASSWORD` (default unset — when set, the UI requires it before any Claude call).
 
 ### 2. `rag/loaders.py`
@@ -313,7 +313,7 @@ scripted client on the single Streamlit container is tens of dollars per hour. T
 **App-side guardrails (code — this repo):**
 
 - `rag/config.py`: add `HISTORY_TURNS` (3), `MAX_QUESTION_CHARS` (600),
-  `MAX_MESSAGES_PER_SESSION` (20), `RATE_LIMIT_PER_HOUR` (60), `APP_PASSWORD` (unset), and
+  `MAX_MESSAGES_PER_SESSION` (20), `RATE_LIMIT_PER_HOUR` (60; later lowered to 20), `APP_PASSWORD` (unset), and
   lower the `MAX_TOKENS` default 2048 → 768. Same `_get` / `_get_int` resolution as the
   rest of config; `_get_int` validation extended to reject `< 1` for the new counters.
 - `rag/chatbot.py`: `build_messages` / `answer` trim `history` to the last `HISTORY_TURNS`

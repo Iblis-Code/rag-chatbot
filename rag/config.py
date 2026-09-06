@@ -73,7 +73,10 @@ MAX_TOKENS = _get_int("MAX_TOKENS", 768)
 # These bound the blast radius; the hard backstop is a monthly spend limit on
 # a dedicated Anthropic Workspace (see README "Cost & abuse controls").
 HISTORY_TURNS = _get_int("HISTORY_TURNS", 3)
-RATE_LIMIT_PER_HOUR = _get_int("RATE_LIMIT_PER_HOUR", 60)
+# 20/hour is far above real reviewer traffic but meaningfully slows a scripted
+# client. The safe value is the default rather than a deployment override, so
+# losing the override can't silently widen the limit. See docs/CONFIGURATION.md.
+RATE_LIMIT_PER_HOUR = _get_int("RATE_LIMIT_PER_HOUR", 20)
 MAX_MESSAGES_PER_SESSION = _get_int("MAX_MESSAGES_PER_SESSION", 20)
 MAX_QUESTION_CHARS = _get_int("MAX_QUESTION_CHARS", 600)
 APP_PASSWORD = _get("APP_PASSWORD")

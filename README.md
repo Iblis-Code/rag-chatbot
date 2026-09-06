@@ -30,7 +30,7 @@ topped up. See [Cost & abuse controls](docs/CONFIGURATION.md#cost-and-abuse-guar
 | GitHub repo | ✅ public — [Iblis-Code/rag-chatbot](https://github.com/Iblis-Code/rag-chatbot), branch `main` |
 | Anthropic Workspace + key | ✅ `rag-chatbot-demo` workspace, scoped key, spend limit + usage alerts |
 | Streamlit Cloud deploy | ✅ live and **publicly reachable** — Python 3.12, no password gate |
-| Cost & abuse controls | ✅ app-wide rate limit (20/hr in production), per-session cap, input cap, bounded history, workspace spend cap — see [docs/CONFIGURATION.md](docs/CONFIGURATION.md) |
+| Cost & abuse controls | ✅ app-wide rate limit (20/hr), per-session cap, input cap, bounded history, workspace spend cap — see [docs/CONFIGURATION.md](docs/CONFIGURATION.md) |
 
 ## Docs
 

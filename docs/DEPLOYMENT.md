@@ -88,8 +88,8 @@ guesswork. **Update this section whenever a setting below changes.**
 - Python version: **3.12** — matches `.python-version`, and deliberately not the 3.14 default
   Streamlit offered, to avoid torch/chromadb wheel issues on a brand-new Python
 - Secrets (Settings → Secrets): `ANTHROPIC_API_KEY` (the `rag-chatbot-demo` key above) and
-  `RATE_LIMIT_PER_HOUR = "20"` (lowered from the code default of 60 — rationale in
-  [CONFIGURATION.md](CONFIGURATION.md#why-the-live-deployment-uses-20-not-60)).
+  `RATE_LIMIT_PER_HOUR = "20"`, which now matches the code default and is kept as an
+  explicit record (rationale in [CONFIGURATION.md](CONFIGURATION.md#why-the-default-is-20)).
   `APP_PASSWORD` is **not** set: it gated the app while access was restricted, and was removed
   when the demo was opened up. Re-adding the secret re-enables the gate with no code change.
 - **Viewer access: public.** Settings → Sharing is set to anyone-with-the-link. It was
